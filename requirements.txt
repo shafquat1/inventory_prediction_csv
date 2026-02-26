@@ -4,7 +4,12 @@ python-dotenv
 langchain_community
 pypdf
 transformers
-torch
-streamlit
-matplotlib
-uni2ts
+streamlit>=1.28.0
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+scipy>=1.13.0
+uni2ts==1.2.0
+gluonts==0.14.4
+einops==0.7.0
+torch>=2.0.0
