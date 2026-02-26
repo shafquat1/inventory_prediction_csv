@@ -1,734 +1,908 @@
 """
-Streamlit Inventory Prediction App - CSV ENABLED VERSION
-Loads inventory data from CSV and generates predictions
+Inventory Prediction App
+Upload per-product sales CSV → predict restock needs, trends & peak moments
 """
 
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
-
-# Page config
+# ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Inventory Prediction AI",
+    page_title="Inventory Prediction",
     page_icon="📦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# ─── CSS ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1E88E5;
-        text-align: center;
-        padding: 1rem 0;
-    }
-    .warning-box {
-        background-color: #FFF3E0;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #FF9800;
-    }
-    .success-box {
-        background-color: #E8F5E9;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #4CAF50;
-    }
-    .info-box {
-        background-color: #E3F2FD;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #2196F3;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
+
+.stApp {
+    background: #0d0d14;
+    color: #e8e8f0;
+}
+
+.main-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #c8ff00;
+    margin-bottom: 0;
+    line-height: 1.1;
+}
+
+.sub-header {
+    color: #888;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #666;
+    margin-bottom: 0.3rem;
+}
+
+.metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #c8ff00;
+    line-height: 1;
+}
+
+.metric-sub {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 0.2rem;
+}
+
+.alert-critical {
+    background: #2a0a0a;
+    border: 1px solid #ff4444;
+    border-left: 4px solid #ff4444;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    color: #ffaaaa;
+}
+
+.alert-warning {
+    background: #1f1800;
+    border: 1px solid #ffaa00;
+    border-left: 4px solid #ffaa00;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    color: #ffd080;
+}
+
+.alert-ok {
+    background: #0a1a0a;
+    border: 1px solid #44cc44;
+    border-left: 4px solid #44cc44;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    color: #aaffaa;
+}
+
+.section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #666;
+    border-bottom: 1px solid #2a2a3a;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.insight-item {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.tag {
+    display: inline-block;
+    background: #c8ff0022;
+    color: #c8ff00;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-right: 0.4rem;
+    border: 1px solid #c8ff0044;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: #0a0a12;
+    border-right: 1px solid #1e1e2e;
+}
+
+[data-testid="stSidebar"] .stMarkdown {
+    color: #aaa;
+}
+
+/* Streamlit components overrides */
+.stButton > button {
+    background: #c8ff00;
+    color: #0d0d14;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    width: 100%;
+}
+
+.stButton > button:hover {
+    background: #d4ff33;
+    color: #0d0d14;
+}
+
+.stTabs [data-baseweb="tab"] {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: #666;
+}
+
+.stTabs [aria-selected="true"] {
+    color: #c8ff00 !important;
+}
+
+.stDataFrame {
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+}
+
+div[data-testid="metric-container"] {
+    background: #16161f;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+div[data-testid="metric-container"] label {
+    color: #888 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+div[data-testid="metric-container"] [data-testid="metric-value"] {
+    color: #c8ff00 !important;
+    font-family: 'Space Mono', monospace !important;
+}
+
+.stSelectbox label, .stSlider label, .stFileUploader label {
+    color: #888 !important;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 
-class ForecastModel:
-    """Statistical forecasting model with advanced time-series analysis"""
-    
-    def __init__(self):
-        self.name = "Advanced Statistical Forecasting"
-    
-    def forecast(self, data_tensor, prediction_length):
-        """Generate forecasts using statistical methods"""
-        # Convert tensor to numpy
-        if hasattr(data_tensor, 'numpy'):
-            data = data_tensor.squeeze().numpy()
-        else:
-            data = np.array(data_tensor).squeeze()
-        
-        # Components analysis
-        recent_30 = data[-30:]
-        recent_60 = data[-60:]
-        
-        # Base level (exponential smoothing)
-        alpha = 0.3
-        base = recent_30[0]
-        for val in recent_30:
-            base = alpha * val + (1 - alpha) * base
-        
-        # Trend (linear regression on recent data)
-        x = np.arange(len(recent_60))
-        coeffs = np.polyfit(x, recent_60, 1)
-        trend = coeffs[0]
-        
-        # Weekly seasonality (average by day of week)
-        weekly_pattern = []
-        for day in range(7):
-            day_values = [data[i] for i in range(len(data)) if i % 7 == day]
-            weekly_pattern.append(np.mean(day_values[-4:]) if day_values else 0)
-        weekly_avg = np.mean(weekly_pattern)
-        weekly_factors = [w - weekly_avg for w in weekly_pattern]
-        
-        # Volatility
-        volatility = np.std(recent_30)
-        
-        # Generate predictions
-        predictions = []
-        for i in range(prediction_length):
-            # Base forecast
-            pred = base + (trend * i)
-            
-            # Add weekly seasonality
-            day_of_week = i % 7
-            pred += weekly_factors[day_of_week]
-            
-            # Add controlled randomness
-            noise = np.random.normal(0, volatility * 0.3)
-            pred += noise
-            
-            # Ensure positive and realistic
-            pred = max(pred, base * 0.3)
-            pred = min(pred, base * 2.5)
-            
-            predictions.append(pred)
-        
-        # Return as tensor-like object
-        class PredictionTensor:
-            def __init__(self, data):
-                self.data = np.array([data])
-            def __getitem__(self, idx):
-                return self.data[idx]
-            def numpy(self):
-                return self.data
-        
-        return PredictionTensor(predictions)
-
-
-@st.cache_data
-def load_inventory_csv(filepath='inventory_prediction_data.csv'):
-    """Load inventory data from CSV file"""
-    try:
-        df = pd.read_csv(filepath)
-        return df
-    except FileNotFoundError:
-        st.error(f"❌ CSV file '{filepath}' not found. Please upload it.")
-        return None
-    except Exception as e:
-        st.error(f"❌ Error loading CSV: {e}")
-        return None
-
-
-@st.cache_resource
-def load_model():
-    """Load forecasting model"""
-    return ForecastModel()
-
-
-def generate_historical_from_csv(item_data, days):
-    """
-    Generate realistic historical demand data based on CSV pre-sales data
-    This creates time-series data that respects the item's characteristics
-    """
-    np.random.seed(hash(item_data['item_name']) % 2**32)
-    
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    dates = pd.date_range(start=start_date, end=end_date, freq='D')
-    
-    actual_days = len(dates)
-    
-    # Calculate base demand from pre-sales weeks
-    weekly_sales = [
-        item_data['pre_sales_week1'],
-        item_data['pre_sales_week2'],
-        item_data['pre_sales_week3'],
-        item_data['pre_sales_week4']
-    ]
-    avg_weekly = np.mean(weekly_sales)
-    base_daily_demand = avg_weekly / 7  # Convert to daily
-    
-    # Use actual monthly sales average
-    monthly_avg = item_data['avg_monthly_sales']
-    base_daily_demand = monthly_avg / 30
-    
-    # Get seasonal factor
-    seasonal_factor = item_data.get('seasonal_factor', 1.0)
-    
-    # Generate base demand
-    demand = np.ones(actual_days) * base_daily_demand
-    
-    # Apply seasonal variations
-    if seasonal_factor > 1.2:  # Highly seasonal (like calendars)
-        seasonal_wave = (seasonal_factor - 1.0) * base_daily_demand * np.sin(
-            np.arange(actual_days) * 2 * np.pi / 90
-        )
-        demand += seasonal_wave
-    
-    # Weekly seasonality (lower on weekends)
-    for i in range(actual_days):
-        day_of_week = (i + dates[0].dayofweek) % 7
-        if day_of_week >= 5:  # Weekend
-            demand[i] *= 0.75
-        elif day_of_week == 0:  # Monday
-            demand[i] *= 1.1
-    
-    # Trend based on recent weeks
-    trend_direction = (weekly_sales[-1] - weekly_sales[0]) / max(weekly_sales[0], 1)
-    if abs(trend_direction) > 0.05:
-        trend = np.linspace(0, base_daily_demand * trend_direction * 0.2, actual_days)
-        demand += trend
-    
-    # Stock turnover influence (higher turnover = more variable demand)
-    turnover = item_data.get('stock_turnover_rate', 0.6)
-    volatility = base_daily_demand * (0.15 + turnover * 0.1)
-    
-    # Add variability
-    demand += np.random.normal(0, volatility, actual_days)
-    
-    # Occasional promotional spikes
-    promo_days = np.random.choice([0, 1], size=actual_days, p=[0.95, 0.05])
-    demand += promo_days * np.random.uniform(base_daily_demand * 0.5, base_daily_demand * 1.5, actual_days)
-    
-    # Ensure positive and reasonable
-    demand = np.maximum(demand, base_daily_demand * 0.2)
-    
-    # Simulate inventory levels
-    current_stock = item_data['current_stock']
-    reorder_point = item_data['reorder_point']
-    lead_time = item_data['lead_time_days']
-    
-    inventory = []
-    stock = current_stock + (base_daily_demand * 30)  # Start with extra stock
-    reorder_qty = base_daily_demand * lead_time * 3
-    
-    for daily_demand in demand:
-        stock -= daily_demand
-        if stock < reorder_point:
-            stock += reorder_qty
-        inventory.append(max(stock, 0))
-    
-    return pd.DataFrame({
-        'date': dates,
-        'demand': demand.astype(int),
-        'inventory_level': np.array(inventory).astype(int)
+# ─── Matplotlib Dark Theme ───────────────────────────────────────────────────
+def set_plot_style():
+    plt.rcParams.update({
+        'figure.facecolor': '#16161f',
+        'axes.facecolor': '#16161f',
+        'axes.edgecolor': '#2a2a3a',
+        'axes.labelcolor': '#888',
+        'axes.titlecolor': '#e8e8f0',
+        'text.color': '#888',
+        'xtick.color': '#555',
+        'ytick.color': '#555',
+        'grid.color': '#2a2a3a',
+        'grid.linestyle': '--',
+        'grid.alpha': 0.5,
+        'lines.linewidth': 2,
+        'font.family': 'monospace',
     })
 
-
-def predict_demand(model, historical_data, prediction_days):
-    """Generate demand predictions"""
-    demand_series = historical_data['demand'].values.astype(float)
-    
-    predictions = model.forecast(demand_series, prediction_length=prediction_days)
-    forecast = predictions[0]
-    
-    return np.maximum(forecast, 0)
+set_plot_style()
 
 
-def plot_forecast(historical_data, predictions):
-    """Create forecast visualization"""
-    fig, ax = plt.subplots(figsize=(12, 5))
-    
+# ─── CSV PARSING ─────────────────────────────────────────────────────────────
+
+def detect_csv_format(df):
+    """
+    Auto-detect if CSV is:
+      - 'wide': product names as columns, rows = dates/days
+      - 'long': columns like [date, product, sales] or [date, sales] for a single product
+      - 'simple': just [date/day, sales] two-column
+    Returns: (format_type, info_dict)
+    """
+    cols = [c.strip().lower() for c in df.columns]
+    col_map = {c.strip().lower(): c for c in df.columns}
+
+    date_keys = ['date', 'day', 'week', 'period', 'time', 'timestamp']
+    sales_keys = ['sales', 'quantity', 'qty', 'units', 'demand', 'sold', 'revenue']
+    product_keys = ['product', 'item', 'sku', 'name']
+    stock_keys = ['stock', 'inventory', 'current_stock', 'on_hand']
+
+    has_date = any(k in cols for k in date_keys)
+    has_product = any(k in cols for k in product_keys)
+    has_sales = any(k in cols for k in sales_keys)
+    has_stock = any(k in cols for k in stock_keys)
+
+    date_col = next((col_map[k] for k in date_keys if k in cols), None)
+    product_col = next((col_map[k] for k in product_keys if k in cols), None)
+    sales_col = next((col_map[k] for k in sales_keys if k in cols), None)
+    stock_col = next((col_map[k] for k in stock_keys if k in cols), None)
+
+    # Wide format: first col is date, rest are product names
+    if has_date and not has_product and not has_sales:
+        numeric_cols = [c for c in df.columns if c != date_col and pd.to_numeric(df[c], errors='coerce').notna().sum() > len(df) * 0.5]
+        if numeric_cols:
+            return 'wide', {
+                'date_col': date_col,
+                'product_cols': numeric_cols,
+                'stock_col': stock_col
+            }
+
+    # Long format with product column
+    if has_date and has_product and has_sales:
+        return 'long', {
+            'date_col': date_col,
+            'product_col': product_col,
+            'sales_col': sales_col,
+            'stock_col': stock_col
+        }
+
+    # Simple two-column: date + sales (single product)
+    if has_date and has_sales:
+        return 'simple', {
+            'date_col': date_col,
+            'sales_col': sales_col,
+            'stock_col': stock_col
+        }
+
+    # Last resort: numeric columns only
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) >= 1:
+        return 'numeric_only', {
+            'sales_col': numeric_cols[0],
+            'product_cols': numeric_cols
+        }
+
+    return 'unknown', {}
+
+
+def parse_to_products(df, fmt, info, current_stock_override=None):
+    """
+    Parse any CSV format into a dict of {product_name: DataFrame(date, sales)}
+    """
+    products = {}
+
+    if fmt == 'wide':
+        date_col = info['date_col']
+        for pcol in info['product_cols']:
+            sub = df[[date_col, pcol]].copy()
+            sub.columns = ['date', 'sales']
+            sub['sales'] = pd.to_numeric(sub['sales'], errors='coerce').fillna(0)
+            try:
+                sub['date'] = pd.to_datetime(sub['date'])
+            except Exception:
+                sub['date'] = pd.date_range(end=datetime.today(), periods=len(sub), freq='D')
+            sub = sub.sort_values('date').reset_index(drop=True)
+            products[pcol] = sub
+
+    elif fmt == 'long':
+        date_col, product_col, sales_col = info['date_col'], info['product_col'], info['sales_col']
+        for prod, grp in df.groupby(product_col):
+            sub = grp[[date_col, sales_col]].copy()
+            sub.columns = ['date', 'sales']
+            sub['sales'] = pd.to_numeric(sub['sales'], errors='coerce').fillna(0)
+            try:
+                sub['date'] = pd.to_datetime(sub['date'])
+            except Exception:
+                sub['date'] = pd.date_range(end=datetime.today(), periods=len(sub), freq='D')
+            sub = sub.sort_values('date').reset_index(drop=True)
+            products[str(prod)] = sub
+
+    elif fmt == 'simple':
+        date_col, sales_col = info['date_col'], info['sales_col']
+        sub = df[[date_col, sales_col]].copy()
+        sub.columns = ['date', 'sales']
+        sub['sales'] = pd.to_numeric(sub['sales'], errors='coerce').fillna(0)
+        try:
+            sub['date'] = pd.to_datetime(sub['date'])
+        except Exception:
+            sub['date'] = pd.date_range(end=datetime.today(), periods=len(sub), freq='D')
+        sub = sub.sort_values('date').reset_index(drop=True)
+        # Extract product name from any name-like column
+        name_keys = ['product', 'item', 'sku', 'name', 'product_name', 'item_name']
+        product_name_col = next((c for c in df.columns if c.strip().lower() in name_keys), None)
+        if product_name_col:
+            non_null = df[product_name_col].dropna()
+            product_label = str(non_null.iloc[0]) if not non_null.empty else 'Product'
+        else:
+            product_label = 'Product'
+        products[product_label] = sub
+
+    elif fmt == 'numeric_only':
+        for col in info['product_cols']:
+            sub = pd.DataFrame({
+                'date': pd.date_range(end=datetime.today(), periods=len(df), freq='D'),
+                'sales': pd.to_numeric(df[col], errors='coerce').fillna(0)
+            })
+            products[col] = sub
+
+    return products
+
+
+# ─── FORECASTING ENGINE — Salesforce Moirai-1.0-R-Base ──────────────────────
+
+try:
+    from gluonts.dataset.pandas import PandasDataset
+    from uni2ts.model.moirai import MoiraiForecast, MoiraiModule
+    MOIRAI_AVAILABLE = True
+except ImportError:
+    MOIRAI_AVAILABLE = False
+
+
+@st.cache_resource(show_spinner="Loading Moirai-1.0-R-Base model (downloads once)...")
+def load_moirai_model():
+    """Download & cache Moirai-1.0-R-Base from Hugging Face. ~91M params."""
+    module = MoiraiModule.from_pretrained("Salesforce/moirai-1.0-R-base")
+    return module
+
+
+def _statistical_fallback(sales: np.ndarray, horizon: int):
+    """Simple fallback when uni2ts is not installed."""
+    n = len(sales)
+    alpha = 0.3
+    s = sales[0]
+    for v in sales:
+        s = alpha * v + (1 - alpha) * s
+    window = min(14, n)
+    slope = np.polyfit(np.arange(window), sales[-window:], 1)[0]
+    std = np.std(sales[-window:])
+    preds = np.array([max(s + slope * (i + 1), 0) for i in range(horizon)])
+    return preds, np.maximum(preds - 1.5 * std, 0), preds + 1.5 * std
+
+
+def forecast_demand(sales: np.ndarray, horizon: int = 30, freq: str = "D"):
+    """
+    Run Salesforce Moirai-1.0-R-Base zero-shot forecast.
+    Returns (point_forecast, lower_bound, upper_bound) as numpy arrays.
+    Falls back to statistical model if uni2ts is not installed.
+    """
+    n = len(sales)
+
+    # Need at least 2 points
+    if n < 2:
+        flat = np.full(horizon, float(sales[0]) if n == 1 else 1.0)
+        return flat, flat * 0.8, flat * 1.2
+
+    if not MOIRAI_AVAILABLE:
+        st.warning(
+            "⚠️ `uni2ts` library not found — using statistical fallback. "
+            "Install with: `pip install uni2ts gluonts`",
+            icon="⚠️"
+        )
+        return _statistical_fallback(sales, horizon)
+
+    try:
+        module = load_moirai_model()
+
+        # Context length: Moirai works best with ≥ 32 points; cap at 512
+        ctx_len = min(max(len(sales), 32), 512)
+
+        # Pad with the series mean if we have fewer points than ctx_len
+        if len(sales) < ctx_len:
+            pad = np.full(ctx_len - len(sales), np.mean(sales))
+            sales_ctx = np.concatenate([pad, sales])
+        else:
+            sales_ctx = sales[-ctx_len:]
+
+        # Build a minimal GluonTS PandasDataset from the context window
+        idx = pd.date_range(end=pd.Timestamp.today().normalize(), periods=ctx_len, freq=freq)
+        df_ctx = pd.DataFrame({"target": sales_ctx.astype(float)}, index=idx)
+        ds = PandasDataset({"series": df_ctx}, target="target", freq=freq)
+
+        # Instantiate MoiraiForecast for this prediction length
+        model = MoiraiForecast(
+            module=module,
+            prediction_length=horizon,
+            context_length=ctx_len,
+            patch_size="auto",
+            num_samples=100,          # 100 Monte-Carlo samples → rich uncertainty
+            target_dim=1,
+            feat_dynamic_real_dim=0,
+            past_feat_dynamic_real_dim=0,
+        )
+
+        predictor = model.create_predictor(batch_size=1)
+        forecast_it = predictor.predict(ds)
+        fc = next(iter(forecast_it))
+
+        # fc.samples shape: (num_samples, horizon)
+        samples = fc.samples                        # (100, horizon)
+        point   = samples.mean(axis=0)             # median or mean — mean is smoother
+        lo      = np.percentile(samples, 10, axis=0)   # 10th percentile
+        hi      = np.percentile(samples, 90, axis=0)   # 90th percentile
+
+        return (
+            np.maximum(point, 0),
+            np.maximum(lo, 0),
+            np.maximum(hi, 0),
+        )
+
+    except Exception as e:
+        st.warning(f"Moirai inference failed ({e}) — falling back to statistical model.")
+        return _statistical_fallback(sales, horizon)
+
+
+def detect_peaks(sales: np.ndarray, dates: pd.Series):
+    """Return indices of peak days above 75th percentile"""
+    threshold = np.percentile(sales, 75)
+    peaks = [(i, dates.iloc[i], sales[i]) for i in range(len(sales)) if sales[i] >= threshold]
+    return peaks
+
+
+def days_until_stockout(current_stock: float, forecast: np.ndarray):
+    """How many days until cumulative demand exceeds stock"""
+    cumulative = np.cumsum(forecast)
+    breach = np.where(cumulative >= current_stock)[0]
+    if len(breach) == 0:
+        return len(forecast), False  # won't run out in horizon
+    return breach[0] + 1, True
+
+
+def reorder_recommendation(avg_daily: float, lead_time: int, safety_days: int):
+    reorder_point = avg_daily * (lead_time + safety_days)
+    suggested_qty = avg_daily * 30  # one month supply
+    return reorder_point, suggested_qty
+
+
+# ─── PLOTS ───────────────────────────────────────────────────────────────────
+
+def plot_sales_and_forecast(hist_df, forecast, lo, hi, product_name):
+    fig, ax = plt.subplots(figsize=(13, 4.5))
+
     # Historical
-    recent = historical_data.tail(60)
-    ax.plot(recent['date'], recent['demand'], 
-            label='Historical Demand', color='#2E86AB', linewidth=2)
-    
-    # Predictions
-    last_date = historical_data['date'].iloc[-1]
-    pred_dates = pd.date_range(start=last_date + timedelta(days=1),
-                                periods=len(predictions), freq='D')
-    
-    ax.plot(pred_dates, predictions, 
-            label='Predicted Demand', color='#E63946', 
-            linewidth=2.5, linestyle='--', marker='o', markersize=4)
-    
-    # Confidence interval
-    std = np.std(recent['demand'].values)
-    ax.fill_between(pred_dates, predictions - std, predictions + std,
-                     alpha=0.2, color='#E63946', label='Confidence Range')
-    
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Demand (Units)', fontsize=12)
-    ax.set_title('Demand Forecast', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=10)
+    ax.plot(hist_df['date'], hist_df['sales'], color='#4488ff', linewidth=2, label='Historical Sales', zorder=3)
+    ax.fill_between(hist_df['date'], hist_df['sales'], alpha=0.1, color='#4488ff')
+
+    # Peaks
+    peaks = detect_peaks(hist_df['sales'].values, hist_df['date'])
+    if peaks:
+        peak_dates = [p[1] for p in peaks]
+        peak_vals = [p[2] for p in peaks]
+        ax.scatter(peak_dates, peak_vals, color='#c8ff00', s=50, zorder=5, label='Peak Moments', alpha=0.9)
+
+    # Forecast
+    last_date = hist_df['date'].iloc[-1]
+    pred_dates = pd.date_range(start=last_date + timedelta(days=1), periods=len(forecast), freq='D')
+    ax.plot(pred_dates, forecast, color='#ff6b6b', linewidth=2.5, linestyle='--', label='Forecast', zorder=4)
+    ax.fill_between(pred_dates, lo, hi, alpha=0.2, color='#ff6b6b', label='Confidence Band')
+
+    # Divider
+    ax.axvline(x=last_date, color='#555', linestyle=':', linewidth=1.5, alpha=0.7)
+    ax.text(last_date, ax.get_ylim()[1] * 0.95, '  NOW', color='#888', fontsize=8, va='top')
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    plt.xticks(rotation=30, ha='right')
+    ax.set_ylabel('Units Sold', fontsize=10, color='#888')
+    ax.set_title(f'{product_name} — Sales History & Forecast', fontsize=12, color='#e8e8f0', pad=12)
+    ax.legend(fontsize=9, loc='upper left', framealpha=0.2, labelcolor='#ccc')
     ax.grid(True, alpha=0.3)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    
+    fig.tight_layout()
     return fig
 
 
-def plot_inventory_projection(historical_data, predictions):
-    """Create inventory projection"""
-    fig, ax = plt.subplots(figsize=(12, 5))
-    
-    current_stock = historical_data['inventory_level'].iloc[-1]
-    projected = [current_stock]
-    
-    for demand in predictions:
-        projected.append(max(projected[-1] - demand, 0))
-    
-    last_date = historical_data['date'].iloc[-1]
-    proj_dates = pd.date_range(start=last_date, periods=len(projected), freq='D')
-    
-    ax.plot(proj_dates, projected, color='#F77F00', linewidth=2.5, 
-            label='Projected Inventory')
-    
-    avg_demand = np.mean(predictions)
-    ax.axhline(y=avg_demand * 10, color='red', linestyle='--', 
-              label='Reorder Point', linewidth=2)
-    ax.axhline(y=avg_demand * 5, color='orange', linestyle='--', 
-              label='Safety Stock', linewidth=2)
-    
-    ax.fill_between(proj_dates, 0, projected, alpha=0.3, color='#F77F00')
-    
-    ax.set_xlabel('Date', fontsize=12)
-    ax.set_ylabel('Inventory Level (Units)', fontsize=12)
-    ax.set_title('Inventory Projection', fontsize=14, fontweight='bold')
-    ax.legend(fontsize=10)
+def plot_inventory_projection(current_stock, forecast, lead_time, safety_days, avg_daily):
+    fig, ax = plt.subplots(figsize=(13, 4))
+
+    stock_proj = [current_stock]
+    for d in forecast:
+        stock_proj.append(max(stock_proj[-1] - d, 0))
+
+    proj_dates = pd.date_range(start=datetime.today(), periods=len(stock_proj), freq='D')
+
+    reorder_pt = avg_daily * (lead_time + safety_days)
+    safety_stock = avg_daily * safety_days
+
+    # Stock line
+    ax.plot(proj_dates, stock_proj, color='#f0a500', linewidth=2.5, label='Projected Stock')
+    ax.fill_between(proj_dates, 0, stock_proj, alpha=0.15, color='#f0a500')
+
+    # Reorder / safety lines
+    ax.axhline(reorder_pt, color='#ff6b6b', linestyle='--', linewidth=1.5, label=f'Reorder Point ({reorder_pt:.0f}u)', alpha=0.9)
+    ax.axhline(safety_stock, color='#ff4444', linestyle=':', linewidth=1.5, label=f'Safety Stock ({safety_stock:.0f}u)', alpha=0.7)
+
+    # Shade danger zone
+    ax.axhspan(0, safety_stock, alpha=0.08, color='#ff4444')
+
+    # Stockout marker
+    stockout_day, will_stockout = days_until_stockout(current_stock, forecast)
+    if will_stockout:
+        stockout_date = datetime.today() + timedelta(days=int(stockout_day))
+        ax.axvline(stockout_date, color='#ff4444', linestyle='-', linewidth=2, alpha=0.6)
+        ax.text(stockout_date, max(stock_proj) * 0.5, f'  Stockout\n  Day {stockout_day}', color='#ff6b6b', fontsize=9)
+
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    plt.xticks(rotation=30, ha='right')
+    ax.set_ylabel('Units in Stock', fontsize=10, color='#888')
+    ax.set_title('Inventory Projection', fontsize=12, color='#e8e8f0', pad=12)
+    ax.legend(fontsize=9, framealpha=0.2, labelcolor='#ccc')
     ax.grid(True, alpha=0.3)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    
+    fig.tight_layout()
     return fig
 
+
+def plot_weekly_heatmap(sales: np.ndarray, dates: pd.Series):
+    """Day-of-week average sales heatmap"""
+    dow_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    dow_avgs = []
+    for dow in range(7):
+        vals = [sales[i] for i in range(len(sales)) if dates.iloc[i].weekday() == dow]
+        dow_avgs.append(np.mean(vals) if vals else 0)
+
+    fig, ax = plt.subplots(figsize=(9, 2.5))
+    colors = ['#c8ff00' if v == max(dow_avgs) else '#4488ff' for v in dow_avgs]
+    bars = ax.bar(dow_names, dow_avgs, color=colors, alpha=0.85, width=0.6)
+
+    for bar, val in zip(bars, dow_avgs):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                f'{val:.1f}', ha='center', va='bottom', fontsize=9, color='#ccc')
+
+    ax.set_title('Avg Sales by Day of Week', fontsize=11, color='#e8e8f0')
+    ax.set_ylabel('Avg Units', fontsize=9, color='#888')
+    ax.grid(axis='y', alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+# ─── SAMPLE CSV ──────────────────────────────────────────────────────────────
+
+def make_sample_csv():
+    dates = pd.date_range(end=datetime.today(), periods=60, freq='D')
+    np.random.seed(42)
+    base = 25
+    sales_a = np.maximum(base + np.random.normal(0, 5, 60) + np.sin(np.arange(60) * 0.3) * 8, 0).astype(int)
+    sales_b = np.maximum(15 + np.random.normal(0, 4, 60) + np.linspace(0, 10, 60), 0).astype(int)
+    df = pd.DataFrame({'date': dates, 'Widget A': sales_a, 'Widget B': sales_b})
+    return df.to_csv(index=False)
+
+
+# ─── MAIN ────────────────────────────────────────────────────────────────────
 
 def main():
     # Header
-    st.markdown('<div class="main-header">📦 Inventory Prediction System</div>', 
-                unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #666;">AI-Powered Demand Forecasting & Inventory Management</p>', 
-                unsafe_allow_html=True)
-    
-    # Info banner
-    st.markdown("""
-    <div class="info-box">
-    <strong>✨ CSV-Powered Forecasting:</strong> Load your inventory data from CSV and get AI-powered predictions 
-    based on historical sales patterns, seasonality, and stock turnover rates.
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # File uploader
-    uploaded_file = st.file_uploader("📁 Upload Inventory CSV", type=['csv'], 
-                                     help="Upload inventory_prediction_data.csv or your own CSV file")
-    
-    # Load CSV
-    if uploaded_file is not None:
-        inventory_df = pd.read_csv(uploaded_file)
-        st.success(f"✓ Loaded {len(inventory_df)} products from CSV")
-    else:
-        # Try to load from current directory
-        inventory_df = load_inventory_csv()
-        if inventory_df is not None:
-            st.success(f"✓ Loaded {len(inventory_df)} products from inventory_prediction_data.csv")
-    
+    st.markdown('<div class="main-header">INVENTORY PREDICTION</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">demand forecasting · restock prediction · peak detection</div>', unsafe_allow_html=True)
+
     # Sidebar
-    st.sidebar.header("⚙️ Configuration")
-    
-    if inventory_df is not None:
-        # Product selection from CSV
-        st.sidebar.subheader("📦 Select Product")
-        
-        # Show products by category
-        categories = inventory_df['category'].unique()
-        selected_category = st.sidebar.selectbox("Filter by Category", 
-                                                  ['All'] + list(categories))
-        
-        if selected_category == 'All':
-            filtered_df = inventory_df
-        else:
-            filtered_df = inventory_df[inventory_df['category'] == selected_category]
-        
-        product_options = [f"{row['item_name']} (Stock: {row['current_stock']})" 
-                          for _, row in filtered_df.iterrows()]
-        
-        selected_product_str = st.sidebar.selectbox("Product", product_options)
-        selected_idx = product_options.index(selected_product_str)
-        selected_item = filtered_df.iloc[selected_idx]
-        
-        # Display product info
-        with st.sidebar.expander("📋 Product Details", expanded=True):
-            st.write(f"**Item ID:** {selected_item['item_id']}")
-            st.write(f"**Category:** {selected_item['category']}")
-            st.write(f"**Current Stock:** {selected_item['current_stock']} units")
-            st.write(f"**Reorder Point:** {selected_item['reorder_point']} units")
-            st.write(f"**Lead Time:** {selected_item['lead_time_days']} days")
-            st.write(f"**Unit Cost:** ${selected_item['unit_cost']:.2f}")
-            st.write(f"**Selling Price:** ${selected_item['selling_price']:.2f}")
-            st.write(f"**Avg Monthly Sales:** {selected_item['avg_monthly_sales']:.0f} units")
-            st.write(f"**Stock Turnover:** {selected_item['stock_turnover_rate']:.2f}")
-            st.write(f"**Seasonal Factor:** {selected_item['seasonal_factor']:.1f}")
-        
-        # Use CSV values
-        lead_time = int(selected_item['lead_time_days'])
-        product_name = selected_item['item_name']
-        product_category = selected_item['category']
-        
-    else:
-        st.sidebar.warning("⚠️ No CSV loaded - using manual input")
-        product_name = st.sidebar.text_input("Product Name", "Wireless Mouse")
-        product_category = st.sidebar.selectbox(
-            "Category",
-            ["Electronics", "Furniture", "Food & Beverage", "Clothing", "Other"]
+    with st.sidebar:
+        st.markdown("### ⚙ SETTINGS")
+
+        uploaded = st.file_uploader(
+            "Upload Sales CSV",
+            type=['csv'],
+            help="Accepts: wide (date + product columns), long (date, product, sales), or simple (date, sales)"
         )
-        lead_time = st.sidebar.slider("Supplier Lead Time (days)", 1, 30, 7, 1)
-        selected_item = None
-    
-    # Prediction settings
-    st.sidebar.subheader("🔮 Forecast Settings")
-    historical_days = st.sidebar.slider(
-        "Historical Data (days)",
-        min_value=90,
-        max_value=365,
-        value=180,
-        step=30
-    )
-    
-    prediction_days = st.sidebar.slider(
-        "Forecast Horizon (days)",
-        min_value=7,
-        max_value=90,
-        value=30,
-        step=7
-    )
-    
-    safety_days = st.sidebar.slider(
-        "Safety Stock (days)",
-        min_value=3,
-        max_value=14,
-        value=5,
-        step=1
-    )
-    
-    # Run prediction button
-    run_prediction = st.sidebar.button("🚀 Run Prediction", type="primary", use_container_width=True)
-    
-    # Main content
-    if run_prediction:
-        if inventory_df is None and selected_item is None:
-            st.error("❌ Please upload a CSV file or check that inventory_prediction_data.csv exists")
-            return
-        
-        # Load model
-        model = load_model()
-        st.success("✓ Forecasting engine ready!")
-        
-        # Generate data
-        with st.spinner("Analyzing historical data..."):
-            if selected_item is not None:
-                # Use CSV data
-                historical_data = generate_historical_from_csv(selected_item, historical_days)
-            else:
-                # Fallback to sample data
-                from generate_sample_data import generate_sample_data
-                historical_data = generate_sample_data(product_name, historical_days, 150, "Stable")
-        
-        # Generate predictions
-        with st.spinner("Generating predictions..."):
-            predictions = predict_demand(model, historical_data, prediction_days)
-        
-        st.success(f"✓ {prediction_days}-day forecast generated!")
-        
-        # Tabs
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📊 Overview", "📈 Forecast", "📦 Inventory", "📋 Recommendations"
-        ])
-        
-        with tab1:
-            st.subheader("Key Metrics")
-            
-            col1, col2, col3, col4 = st.columns(4)
-            
-            current_stock = historical_data['inventory_level'].iloc[-1]
-            avg_pred = np.mean(predictions)
-            total_pred = np.sum(predictions)
-            hist_avg = historical_data['demand'].tail(30).mean()
-            change = ((avg_pred - hist_avg) / hist_avg) * 100
-            
-            with col1:
-                st.metric("Current Stock", f"{current_stock:.0f} units")
-            
-            with col2:
-                st.metric("Avg Predicted Demand", f"{avg_pred:.1f} units/day")
-            
-            with col3:
-                st.metric(f"{prediction_days}-Day Demand", f"{total_pred:.0f} units")
-            
-            with col4:
-                st.metric("Demand Trend", f"{change:+.1f}%")
-            
-            st.markdown("---")
-            
-            # Historical summary
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.subheader("📊 Historical Analysis (Last 30 Days)")
-                recent = historical_data.tail(30)
-                
-                metrics_df = pd.DataFrame({
-                    'Metric': [
-                        'Average Demand',
-                        'Peak Demand',
-                        'Low Demand',
-                        'Std Deviation',
-                        'Total Demand'
-                    ],
-                    'Value': [
-                        f"{recent['demand'].mean():.1f} units",
-                        f"{recent['demand'].max():.0f} units",
-                        f"{recent['demand'].min():.0f} units",
-                        f"{recent['demand'].std():.1f} units",
-                        f"{recent['demand'].sum():.0f} units"
-                    ]
-                })
-                st.dataframe(metrics_df, hide_index=True, use_container_width=True)
-            
-            with col2:
-                st.subheader("🔮 Forecast Summary")
-                
-                forecast_df = pd.DataFrame({
-                    'Metric': [
-                        'Avg Predicted Demand',
-                        'Peak Predicted Demand',
-                        'Low Predicted Demand',
-                        'Total Forecasted',
-                        'Forecast Method'
-                    ],
-                    'Value': [
-                        f"{predictions.mean():.1f} units",
-                        f"{predictions.max():.0f} units",
-                        f"{predictions.min():.0f} units",
-                        f"{predictions.sum():.0f} units",
-                        "Statistical AI"
-                    ]
-                })
-                st.dataframe(forecast_df, hide_index=True, use_container_width=True)
-        
-        with tab2:
-            st.subheader("📈 Demand Forecast")
-            
-            fig = plot_forecast(historical_data, predictions)
-            st.pyplot(fig)
-            
-            st.markdown("---")
-            
-            st.subheader("📅 Day-by-Day Predictions")
-            
-            last_date = historical_data['date'].iloc[-1]
-            pred_df = pd.DataFrame({
-                'Date': [(last_date + timedelta(days=i+1)).strftime('%Y-%m-%d') 
-                        for i in range(len(predictions))],
-                'Day': [(last_date + timedelta(days=i+1)).strftime('%A') 
-                       for i in range(len(predictions))],
-                'Predicted Demand': [f"{pred:.0f}" for pred in predictions]
-            })
-            
-            st.dataframe(pred_df, hide_index=True, use_container_width=True, height=400)
-        
-        with tab3:
-            st.subheader("📦 Inventory Level Projection")
-            
-            fig = plot_inventory_projection(historical_data, predictions)
-            st.pyplot(fig)
-            
-            st.markdown("---")
-            
-            # Days until stockout
-            cumulative = 0
-            days_to_stockout = len(predictions)
-            for i, demand in enumerate(predictions):
-                cumulative += demand
-                if cumulative > current_stock:
-                    days_to_stockout = i
-                    break
-            
-            col1, col2, col3 = st.columns(3)
-            
-            reorder_point = np.mean(predictions) * (lead_time + safety_days)
-            safety_stock = np.mean(predictions) * safety_days
-            
-            with col1:
-                st.metric("Days Until Stockout", f"{days_to_stockout} days")
-            
-            with col2:
-                st.metric("Reorder Point", f"{reorder_point:.0f} units")
-            
-            with col3:
-                st.metric("Safety Stock", f"{safety_stock:.0f} units")
-        
-        with tab4:
-            st.subheader("📋 Reorder Recommendations")
-            
-            # Calculate recommendations
-            avg_demand = np.mean(predictions)
-            reorder_point = avg_demand * (lead_time + safety_days)
-            order_qty = int(avg_demand * 30)
-            needs_reorder = current_stock < reorder_point
-            
-            if days_to_stockout <= 7:
-                urgency = "🔴 HIGH"
-                urgency_color = "error"
-            elif days_to_stockout <= 14:
-                urgency = "🟡 MEDIUM"
-                urgency_color = "warning"
-            else:
-                urgency = "🟢 LOW"
-                urgency_color = "success"
-            
-            # Display urgency
-            if urgency_color == "error":
-                st.error(f"**Urgency Level:** {urgency}")
-            elif urgency_color == "warning":
-                st.warning(f"**Urgency Level:** {urgency}")
-            else:
-                st.success(f"**Urgency Level:** {urgency}")
-            
-            st.markdown("---")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("### 📊 Current Status")
-                status_df = pd.DataFrame({
-                    'Parameter': [
-                        'Current Stock Level',
-                        'Reorder Point',
-                        'Safety Stock Level',
-                        'Days Until Stockout',
-                        'Supplier Lead Time'
-                    ],
-                    'Value': [
-                        f"{current_stock:.0f} units",
-                        f"{reorder_point:.0f} units",
-                        f"{safety_stock:.0f} units",
-                        f"{days_to_stockout} days",
-                        f"{lead_time} days"
-                    ]
-                })
-                st.dataframe(status_df, hide_index=True, use_container_width=True)
-            
-            with col2:
-                st.markdown("### 💡 Action Items")
-                
-                if needs_reorder:
-                    st.markdown(f"""
-                    <div class="warning-box">
-                    <h4>⚠️ Reorder Required</h4>
-                    <p><strong>Recommended Order:</strong> {order_qty} units</p>
-                    <p><strong>Action:</strong> Stock below reorder point</p>
-                    <p><strong>Expected Delivery:</strong> {lead_time} days</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="success-box">
-                    <h4>✓ Stock Levels Adequate</h4>
-                    <p><strong>Next Review:</strong> {days_to_stockout // 2} days</p>
-                    <p><strong>Current Coverage:</strong> {days_to_stockout} days</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            st.markdown("### 🎯 Key Insights")
-            
-            insights = []
-            
-            # Trend insight
-            hist_avg = historical_data['demand'].tail(30).mean()
-            trend_pct = ((avg_demand - hist_avg) / hist_avg) * 100
-            if abs(trend_pct) > 5:
-                direction = "increasing" if trend_pct > 0 else "decreasing"
-                insights.append(f"• Demand is {direction} by {abs(trend_pct):.1f}% - adjust stock levels accordingly")
-            
-            # Volatility insight
-            cv = historical_data['demand'].tail(30).std() / hist_avg
-            if cv > 0.3:
-                insights.append(f"• High demand variability detected (CV={cv:.2f}) - maintain higher safety stock")
-            
-            # Stockout risk
-            if days_to_stockout <= 10:
-                insights.append(f"• ⚠️ Stockout risk within {days_to_stockout} days - prioritize reorder")
-            
-            # Seasonal insights (if CSV data available)
-            if selected_item is not None and selected_item['seasonal_factor'] > 1.3:
-                insights.append(f"• High seasonal variability (factor: {selected_item['seasonal_factor']:.1f}) - plan for demand spikes")
-            
-            # Optimal order
-            insights.append(f"• Recommended order quantity covers ~30 days of forecasted demand")
-            
-            for insight in insights:
-                st.markdown(insight)
-    
-    else:
-        # Welcome screen
-        st.info("👈 Configure settings in the sidebar and click 'Run Prediction' to start")
-        
-        st.markdown("### 🎯 Features")
+
+        st.markdown("---")
+        current_stock_input = st.number_input("Current Stock (units)", min_value=0, value=200, step=10)
+        lead_time = st.slider("Supplier Lead Time (days)", 1, 30, 7)
+        safety_days = st.slider("Safety Stock Buffer (days)", 1, 14, 5)
+        forecast_horizon = st.slider("Forecast Horizon (days)", 7, 90, 30, step=7)
+
+        st.markdown("---")
+        st.download_button(
+            "📥 Download Sample CSV",
+            data=make_sample_csv(),
+            file_name="sample_inventory.csv",
+            mime="text/csv"
+        )
+
+        run = st.button("🚀 Run Analysis", type="primary")
+
+    # ── No file yet ──
+    if uploaded is None:
+        st.markdown("---")
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             st.markdown("""
-            **📈 Demand Forecasting**
-            - CSV-powered predictions
-            - Uses pre-sales data
-            - Trend & seasonality detection
-            - Up to 90-day horizon
-            """)
-        
+            <div class="metric-card">
+            <div class="metric-label">Step 1</div>
+            <div style="font-size:1.8rem">📁</div>
+            <div style="color:#ccc; margin-top:0.5rem">Upload your sales CSV — daily or weekly, single product or multi-product</div>
+            </div>""", unsafe_allow_html=True)
         with col2:
             st.markdown("""
-            **📦 Inventory Management**
-            - Real-time stock projections
-            - Automated reorder points
-            - Safety stock calculation
-            - Stockout prevention
-            """)
-        
+            <div class="metric-card">
+            <div class="metric-label">Step 2</div>
+            <div style="font-size:1.8rem">⚙️</div>
+            <div style="color:#ccc; margin-top:0.5rem">Set your current stock, lead time, and safety buffer in the sidebar</div>
+            </div>""", unsafe_allow_html=True)
         with col3:
             st.markdown("""
-            **💡 Smart Recommendations**
-            - Urgency-based alerts
-            - Optimal order quantities
-            - Risk assessment
-            - Actionable insights
-            """)
-        
-        st.markdown("---")
-        
-        st.markdown("### 🚀 Quick Start")
+            <div class="metric-card">
+            <div class="metric-label">Step 3</div>
+            <div style="font-size:1.8rem">📊</div>
+            <div style="color:#ccc; margin-top:0.5rem">Get forecasts, restock alerts, trend analysis and peak moment detection</div>
+            </div>""", unsafe_allow_html=True)
+
         st.markdown("""
-        1. **Upload** your inventory CSV file (or ensure inventory_prediction_data.csv is in the directory)
-        2. **Select** a product from the dropdown
-        3. **Set** forecast parameters
-        4. **Click** '🚀 Run Prediction' to generate forecasts
-        
-        💡 **CSV Format:** Your CSV should include columns like item_name, current_stock, pre_sales_week1-4, 
-        avg_monthly_sales, seasonal_factor, etc.
-        """)
+        ---
+        <div class="section-title">Accepted CSV Formats</div>
+        """, unsafe_allow_html=True)
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("**Wide (multi-product)**")
+            st.code("date, Widget A, Widget B\n2024-01-01, 30, 12\n2024-01-02, 28, 15", language='text')
+        with c2:
+            st.markdown("**Long format**")
+            st.code("date, product, sales\n2024-01-01, Widget A, 30\n2024-01-01, Widget B, 12", language='text')
+        with c3:
+            st.markdown("**Simple (single product)**")
+            st.code("date, sales\n2024-01-01, 30\n2024-01-02, 28", language='text')
+
+        st.info("💡 Download the sample CSV above to test the app instantly.")
+        return
+
+    # ── Parse CSV ──
+    try:
+        df = pd.read_csv(uploaded)
+    except Exception as e:
+        st.error(f"Could not read CSV: {e}")
+        return
+
+    fmt, info = detect_csv_format(df)
+    if fmt == 'unknown':
+        st.error("Could not auto-detect CSV format. Please ensure you have a date column and numeric sales columns.")
+        st.write("Detected columns:", list(df.columns))
+        return
+
+    products = parse_to_products(df, fmt, info)
+
+    if not products:
+        st.error("No product data found after parsing.")
+        return
+
+    # ── Product selector ──
+    product_names = list(products.keys())
+    if len(product_names) > 1:
+        selected = st.selectbox("Select Product", product_names)
+    else:
+        selected = product_names[0]
+        st.markdown(f"**Product:** `{selected}`")
+
+    hist_df = products[selected].copy()
+
+    if not run:
+        st.info(f"✓ Loaded **{len(hist_df)}** data points for **{selected}**. Click **Run Analysis** to forecast.")
+        with st.expander("Preview raw data"):
+            st.dataframe(hist_df.head(20), use_container_width=True)
+        return
+
+    # ─── Analysis ──────────────────────────────────────────────────────────
+    sales = hist_df['sales'].values.astype(float)
+    dates = hist_df['date']
+
+    forecast, lo, hi = forecast_demand(sales, forecast_horizon)
+    avg_daily = np.mean(forecast)
+    total_forecasted = np.sum(forecast)
+    stockout_day, will_stockout = days_until_stockout(current_stock_input, forecast)
+    reorder_pt, suggested_qty = reorder_recommendation(avg_daily, lead_time, safety_days)
+    hist_avg = np.mean(sales[-min(14, len(sales)):])
+    trend_pct = ((avg_daily - hist_avg) / hist_avg * 100) if hist_avg > 0 else 0
+
+    # ─── Urgency Level ─────────────────────────────────────────────────────
+    if will_stockout and stockout_day <= lead_time:
+        urgency_html = '<div class="alert-critical">🔴 <strong>CRITICAL</strong> — Stockout expected before next delivery. Order NOW.</div>'
+    elif will_stockout and stockout_day <= lead_time + safety_days:
+        urgency_html = '<div class="alert-warning">🟡 <strong>REORDER NOW</strong> — Stock will hit safety threshold within lead time window.</div>'
+    elif current_stock_input < reorder_pt:
+        urgency_html = '<div class="alert-warning">🟡 <strong>REORDER ADVISED</strong> — Current stock is below reorder point.</div>'
+    else:
+        urgency_html = '<div class="alert-ok">🟢 <strong>STOCK OK</strong> — Inventory adequate for forecast horizon.</div>'
+
+    st.markdown(urgency_html, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ─── KPI Row ────────────────────────────────────────────────────────────
+    k1, k2, k3, k4, k5 = st.columns(5)
+    with k1:
+        st.metric("Current Stock", f"{current_stock_input:,} u")
+    with k2:
+        st.metric("Days to Stockout", f"{stockout_day}d" if will_stockout else f">{forecast_horizon}d")
+    with k3:
+        st.metric("Avg Daily Demand", f"{avg_daily:.1f} u")
+    with k4:
+        st.metric(f"{forecast_horizon}d Forecast Total", f"{total_forecasted:.0f} u")
+    with k5:
+        st.metric("Demand Trend", f"{trend_pct:+.1f}%", delta=f"{trend_pct:+.1f}%")
+
+    st.markdown("---")
+
+    # ─── Tabs ───────────────────────────────────────────────────────────────
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Forecast", "📦 Inventory", "📅 Peak Moments", "💡 Recommendations"])
+
+    with tab1:
+        fig = plot_sales_and_forecast(hist_df, forecast, lo, hi, selected)
+        st.pyplot(fig)
+
+        st.markdown('<div class="section-title">Day-by-Day Forecast</div>', unsafe_allow_html=True)
+        pred_dates = pd.date_range(start=hist_df['date'].iloc[-1] + timedelta(days=1), periods=forecast_horizon, freq='D')
+        forecast_table = pd.DataFrame({
+            'Date': [d.strftime('%Y-%m-%d') for d in pred_dates],
+            'Day': [d.strftime('%A') for d in pred_dates],
+            'Forecast (units)': [f"{v:.0f}" for v in forecast],
+            'Low Estimate': [f"{v:.0f}" for v in lo],
+            'High Estimate': [f"{v:.0f}" for v in hi],
+        })
+        st.dataframe(forecast_table, hide_index=True, use_container_width=True, height=350)
+
+    with tab2:
+        fig2 = plot_inventory_projection(current_stock_input, forecast, lead_time, safety_days, avg_daily)
+        st.pyplot(fig2)
+
+        st.markdown('<div class="section-title">Inventory Milestones</div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("Reorder Point", f"{reorder_pt:.0f} units")
+        with c2:
+            st.metric("Safety Stock", f"{avg_daily * safety_days:.0f} units")
+        with c3:
+            st.metric("Suggested Order Qty", f"{suggested_qty:.0f} units")
+
+    with tab3:
+        st.markdown('<div class="section-title">Weekly Pattern</div>', unsafe_allow_html=True)
+        if len(sales) >= 7:
+            fig3 = plot_weekly_heatmap(sales, dates)
+            st.pyplot(fig3)
+        else:
+            st.info("Need at least 7 days of data to compute weekly patterns.")
+
+        st.markdown('<div class="section-title">Historical Peak Days (Top 25%)</div>', unsafe_allow_html=True)
+        peaks = detect_peaks(sales, dates)
+        if peaks:
+            peaks_sorted = sorted(peaks, key=lambda x: -x[2])
+            peak_df = pd.DataFrame([{
+                'Date': p[1].strftime('%Y-%m-%d'),
+                'Day': p[1].strftime('%A'),
+                'Sales (units)': int(p[2]),
+                'vs Avg': f"+{((p[2] / np.mean(sales) - 1) * 100):.0f}%"
+            } for p in peaks_sorted[:20]])
+            st.dataframe(peak_df, hide_index=True, use_container_width=True)
+        else:
+            st.info("No peaks detected with current data.")
+
+        # Forecast peaks
+        st.markdown('<div class="section-title">Forecasted Peak Days</div>', unsafe_allow_html=True)
+        pred_dates_list = pd.date_range(start=hist_df['date'].iloc[-1] + timedelta(days=1), periods=forecast_horizon, freq='D')
+        threshold = np.percentile(forecast, 75)
+        forecast_peaks = [(d, v) for d, v in zip(pred_dates_list, forecast) if v >= threshold]
+        if forecast_peaks:
+            fp_df = pd.DataFrame([{
+                'Date': d.strftime('%Y-%m-%d'),
+                'Day': d.strftime('%A'),
+                'Predicted Sales': f"{v:.0f}",
+            } for d, v in sorted(forecast_peaks, key=lambda x: -x[1])[:15]])
+            st.dataframe(fp_df, hide_index=True, use_container_width=True)
+
+    with tab4:
+        st.markdown('<div class="section-title">Restock Recommendation</div>', unsafe_allow_html=True)
+
+        if will_stockout and stockout_day <= lead_time:
+            st.markdown(f"""
+            <div class="alert-critical">
+            <strong>⚡ URGENT ORDER REQUIRED</strong><br><br>
+            Current stock of <strong>{current_stock_input:,} units</strong> will run out in <strong>{stockout_day} days</strong>, 
+            which is within your <strong>{lead_time}-day lead time</strong>.<br><br>
+            → Order <strong>{suggested_qty:.0f} units</strong> immediately to avoid a stockout.
+            </div>
+            """, unsafe_allow_html=True)
+        elif current_stock_input < reorder_pt:
+            restock_date = datetime.today() + timedelta(days=lead_time)
+            st.markdown(f"""
+            <div class="alert-warning">
+            <strong>🛒 REORDER NOW</strong><br><br>
+            Current stock ({current_stock_input:,}u) is below reorder point ({reorder_pt:.0f}u).<br>
+            Order <strong>{suggested_qty:.0f} units</strong> today to receive by <strong>{restock_date.strftime('%b %d, %Y')}</strong>.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            next_reorder = int(stockout_day) - lead_time - safety_days
+            reorder_date = datetime.today() + timedelta(days=max(next_reorder, 0))
+            st.markdown(f"""
+            <div class="alert-ok">
+            <strong>✅ STOCK ADEQUATE</strong><br><br>
+            Next recommended reorder date: <strong>{reorder_date.strftime('%b %d, %Y')}</strong> 
+            (Day {max(next_reorder, 0)}) for <strong>{suggested_qty:.0f} units</strong>.
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Key Insights</div>', unsafe_allow_html=True)
+
+        insights = []
+
+        if abs(trend_pct) > 5:
+            direction = "rising" if trend_pct > 0 else "falling"
+            insights.append(f"📈 Demand is <strong>{direction} by {abs(trend_pct):.1f}%</strong> vs last 14-day average — adjust order quantities accordingly.")
+
+        cv = np.std(sales) / np.mean(sales) if np.mean(sales) > 0 else 0
+        if cv > 0.3:
+            insights.append(f"⚡ High demand volatility detected (CV={cv:.2f}). Maintain a larger safety buffer to avoid surprise stockouts.")
+
+        if len(peaks) > 0:
+            peak_day = max(peaks, key=lambda x: x[2])
+            insights.append(f"🎯 Historically highest sales on <strong>{peak_day[1].strftime('%A')}s</strong> — plan promotions and stock around this.")
+
+        if will_stockout:
+            insights.append(f"⚠️ Stock will be depleted in <strong>{stockout_day} days</strong> based on forecast.")
+
+        if avg_daily > 0:
+            days_coverage = current_stock_input / avg_daily
+            insights.append(f"📦 At forecasted demand, current stock covers approximately <strong>{days_coverage:.0f} days</strong>.")
+
+        if not insights:
+            insights.append("✅ No major issues detected. Monitor weekly and reorder when stock crosses the reorder point.")
+
+        for ins in insights:
+            st.markdown(f'<div class="insight-item">{ins}</div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Parameter Summary</div>', unsafe_allow_html=True)
+        param_df = pd.DataFrame({
+            'Parameter': ['Current Stock', 'Avg Daily Demand', 'Reorder Point', 'Safety Stock',
+                          'Suggested Order Qty', 'Supplier Lead Time', 'Days to Stockout'],
+            'Value': [
+                f"{current_stock_input:,} units",
+                f"{avg_daily:.1f} units/day",
+                f"{reorder_pt:.0f} units",
+                f"{avg_daily * safety_days:.0f} units",
+                f"{suggested_qty:.0f} units",
+                f"{lead_time} days",
+                f"{stockout_day} days" if will_stockout else f">{forecast_horizon} days"
+            ]
+        })
+        st.dataframe(param_df, hide_index=True, use_container_width=True)
 
 
 if __name__ == "__main__":
