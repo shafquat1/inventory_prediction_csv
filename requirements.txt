@@ -8,5 +8,5 @@ streamlit
 numpy
 pandas
 matplotlib
-uni2ts==1.2.0
-torch>=2.0.0
+uni2ts
+torch
