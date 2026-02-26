@@ -7,3 +7,4 @@ transformers
 torch
 streamlit
 matplotlib
+uni2ts
