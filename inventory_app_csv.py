@@ -152,6 +152,17 @@ html, body, [class*="css"] {
     color: #aaa;
 }
 
+/* Multiselect tag text color override */
+.stMultiSelect [data-baseweb="tag"] {
+    color: #000000 !important;
+}
+.stMultiSelect [data-baseweb="tag"] span {
+    color: #000000 !important;
+}
+.stMultiSelect [data-baseweb="tag"] svg {
+    fill: #000000 !important;
+}
+
 /* Streamlit components overrides */
 .stButton > button {
     background: #c8ff00;
