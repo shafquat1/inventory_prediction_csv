@@ -1,12 +1,9 @@
-langchain
-ipykernel
-python-dotenv
-langchain_community
-pypdf
-transformers
 streamlit
 numpy
 pandas
+plotly
 matplotlib
+python-dotenv
 uni2ts
+gluonts
 torch

@@ -1,0 +1,40 @@
+item_id,item_name,category,supplier_id,unit_cost,selling_price,current_stock,reorder_point,lead_time_days,pre_sales_week1,pre_sales_week2,pre_sales_week3,pre_sales_week4,avg_monthly_sales,seasonal_factor,stock_turnover_rate,unit_type,unit_measure
+LQ001,Whole Milk,Dairy,SUP011,1.20,2.49,320,80,2,210,198,225,215,848,1.10,8.50,liquid,L
+LQ002,Orange Juice (Fresh Squeezed),Beverages,SUP012,1.85,4.29,145,40,3,88,92,79,95,354,1.25,6.20,liquid,L
+LQ003,Olive Oil Extra Virgin,Cooking Oils,SUP013,4.50,9.99,90,25,5,32,28,35,30,125,0.95,4.10,liquid,500mL
+LQ004,White Vinegar,Condiments,SUP014,0.60,1.49,180,45,3,55,48,60,52,215,0.85,3.60,liquid,L
+LQ005,Apple Cider,Beverages,SUP012,1.40,3.19,110,30,3,72,68,80,75,295,1.40,8.20,liquid,L
+LQ006,Dish Soap,Cleaning Products,SUP021,0.95,2.79,200,50,4,65,70,62,68,265,0.90,4.00,liquid,500mL
+LQ007,Laundry Detergent Liquid,Cleaning Products,SUP021,3.20,7.49,85,20,4,28,25,30,27,110,0.88,3.90,liquid,2L
+LQ008,Bleach Multipurpose,Cleaning Products,SUP021,1.10,2.59,160,40,4,45,42,48,44,179,0.92,3.35,liquid,1L
+LQ009,Coconut Oil,Cooking Oils,SUP013,3.80,8.49,75,20,5,22,25,20,24,91,1.05,3.65,liquid,500mL
+LQ010,Sparkling Water,Beverages,SUP012,0.55,1.29,280,70,2,145,138,152,148,583,1.15,6.30,liquid,1L
+LQ011,Soy Sauce,Condiments,SUP015,1.20,2.99,120,30,4,38,35,42,40,155,1.00,3.88,liquid,250mL
+LQ012,Hand Sanitizer,Health & Beauty,SUP022,0.80,2.49,190,50,3,60,65,55,62,242,1.20,3.85,liquid,300mL
+WG001,Chicken Breast,Meat & Poultry,SUP031,4.20,8.99,85,25,1,52,48,55,50,205,1.05,7.25,weight,kg
+WG002,Ground Beef,Meat & Poultry,SUP031,5.50,11.49,60,18,1,38,42,35,40,155,1.00,7.75,weight,kg
+WG003,Salmon Fillet,Seafood,SUP032,9.80,18.99,40,12,2,18,20,15,22,75,1.15,5.63,weight,kg
+WG004,Bananas,Produce,SUP041,0.35,0.89,200,60,1,148,155,140,160,603,1.10,9.05,weight,kg
+WG005,Broccoli,Produce,SUP041,0.90,2.29,120,35,1,75,70,80,72,297,1.20,7.43,weight,kg
+WG006,Baby Spinach,Produce,SUP041,1.80,3.99,80,25,1,45,42,48,44,179,1.30,6.71,weight,kg
+WG007,White Potatoes,Produce,SUP042,0.45,1.29,250,65,1,120,115,130,125,490,0.85,5.88,weight,kg
+WG008,Brown Rice,Grains & Cereals,SUP051,1.10,2.79,160,40,5,65,62,68,64,259,0.90,4.86,weight,kg
+WG009,All-Purpose Flour,Grains & Cereals,SUP051,0.75,1.99,190,50,5,78,72,82,76,308,1.05,4.86,weight,kg
+WG010,Cheddar Cheese,Dairy,SUP011,3.50,6.99,90,25,3,45,48,42,50,185,1.00,6.17,weight,kg
+WG011,Turkey Breast Deli,Meat & Poultry,SUP031,6.20,12.49,50,15,1,28,30,25,32,115,1.10,6.90,weight,kg
+WG012,Sweet Potatoes,Produce,SUP042,0.80,1.99,140,40,1,68,65,72,70,275,1.25,5.88,weight,kg
+UN001,Canned Tomatoes (400g),Canned Goods,SUP061,0.55,1.29,350,90,7,185,178,192,188,743,0.95,6.36,unit,each
+UN002,Canned Black Beans,Canned Goods,SUP061,0.60,1.39,280,70,7,132,128,138,135,533,0.90,5.71,unit,each
+UN003,Pasta Spaghetti 500g,Dry Goods,SUP062,0.70,1.79,240,60,6,108,102,115,110,435,0.95,5.44,unit,each
+UN004,Instant Oatmeal Pack,Breakfast,SUP063,1.20,2.99,180,45,5,82,78,88,85,333,1.35,5.55,unit,pack
+UN005,AA Batteries 4-Pack,Electronics,SUP071,1.50,4.29,120,30,7,38,35,42,40,155,0.90,3.88,unit,pack
+UN006,Light Bulb LED 60W,Electronics,SUP071,1.80,5.49,90,22,7,22,20,25,23,90,0.85,3.00,unit,each
+UN007,Paper Towels (Double Roll),Household,SUP072,1.20,3.49,200,50,5,88,82,92,90,352,0.95,5.28,unit,roll
+UN008,Toilet Paper 12-Pack,Household,SUP072,4.50,9.99,110,28,5,48,45,52,50,195,1.00,5.28,unit,pack
+UN009,Sliced Bread White,Bakery,SUP081,1.00,2.49,160,45,1,95,90,100,98,383,1.00,7.18,unit,each
+UN010,Eggs Large Dozen,Dairy & Eggs,SUP011,2.20,4.49,200,55,2,128,122,135,130,515,1.05,7.72,unit,dozen
+UN011,Breakfast Cereal Cornflakes,Breakfast,SUP063,1.60,3.79,130,35,5,55,52,58,56,221,1.10,5.12,unit,each
+UN012,Granola Bar Box (6-pack),Snacks,SUP091,2.50,5.99,95,25,5,40,38,43,42,163,1.20,5.13,unit,pack
+UN013,Frozen Pizza (Individual),Frozen Foods,SUP092,2.80,6.49,80,20,4,35,32,38,36,141,1.15,5.28,unit,each
+UN014,Chocolate Bar 100g,Confectionery,SUP091,0.90,2.29,220,55,6,98,92,105,100,395,1.30,5.38,unit,each
+UN015,Vitamin C 500mg (60 tabs),Health & Beauty,SUP022,2.10,6.99,70,18,7,22,20,25,23,90,1.25,3.86,unit,each
