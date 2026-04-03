@@ -775,12 +775,22 @@ def parse_inventory_catalog(df):
 
 
 def format_qty(value, unit_type, unit_measure):
-    """Format a quantity with its unit label."""
+    """Format a quantity with its unit label.
+
+    Handles two kinds of unit_measure:
+      • Simple units  (L, kg, each, pack …) → "{value} {um}"
+      • Package sizes (500mL, 2L, 300mL …) → "{value} × {um}"
+        These start with a digit and describe the size of one container,
+        so "75 500mL" is wrong — it should read "75 × 500mL".
+    """
     ut = (unit_type or 'unit').lower()
-    um = unit_measure or 'units'
+    um = (unit_measure or 'units').strip()
+
+    # Package-size descriptor (e.g. "500mL", "2L", "1L", "250mL", "300mL")
+    if um and um[0].isdigit():
+        return f"{int(round(value))} × {um}"
+
     if ut == 'liquid':
-        if any(s in um.lower() for s in ['ml', 'oz', 'fl']):
-            return f"{value:.0f} {um}"
         return f"{value:.1f} {um}"
     elif ut == 'weight':
         if 'g' in um.lower() and 'kg' not in um.lower():
